@@ -1,7 +1,13 @@
 package com.example.myapplication;
 
+import android.app.Dialog;
+import android.content.Context;
+import android.graphics.Color;
+import android.graphics.drawable.ColorDrawable;
 import android.os.AsyncTask;
+import android.support.design.widget.Snackbar;
 import android.text.Editable;
+import android.text.Html;
 import android.text.InputType;
 import android.text.TextUtils;
 import android.text.TextWatcher;
@@ -9,7 +15,16 @@ import android.text.method.PasswordTransformationMethod;
 import android.util.Log;
 import android.view.Display;
 import android.view.View;
+import android.view.Window;
+import android.view.WindowManager;
+import android.view.inputmethod.InputMethodManager;
+import android.widget.LinearLayout;
 import android.widget.ProgressBar;
+import android.widget.Toast;
+
+import com.loopj.android.http.AsyncHttpClient;
+import com.loopj.android.http.AsyncHttpResponseHandler;
+import com.loopj.android.http.RequestParams;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -25,17 +40,28 @@ import java.util.Objects;
 
 import javax.net.ssl.HttpsURLConnection;
 
+import static android.content.Context.INPUT_METHOD_SERVICE;
 import static com.example.myapplication.MainActivity.button;
 import static com.example.myapplication.MainActivity.firstEdt;
 import static com.example.myapplication.MainActivity.first_edt;
+import static com.example.myapplication.MainActivity.parent;
 import static com.example.myapplication.MainActivity.secondEdt;
 import static com.example.myapplication.MainActivity.second_edt;
+import static com.example.myapplication.MainActivity.submitLayout;
 
 
 public class FetchData extends AsyncTask<Void, Void, Void> {
 
     private String data = "";
     private Model model;
+    private Context mContext;
+    private boolean isNumValid = false;
+    private boolean isTextValid = false;
+
+    FetchData(Context mContext) {
+        this.mContext = mContext;
+    }
+
 
     @Override
     protected Void doInBackground(Void... voids) {
@@ -49,7 +75,8 @@ public class FetchData extends AsyncTask<Void, Void, Void> {
         model = new Model();
         try {
             // my Json server url /https://api.myjson.com/bins/rtx6m
-            URL apiUrl = new URL("https://ca.platform.simplifii.xyz/api/v1/static/assignment2");
+            //assesment link https://ca.platform.simplifii.xyz/api/v1/static/assignment2
+            URL apiUrl = new URL("https://api.myjson.com/bins/pozw6");
             HttpsURLConnection connection = (HttpsURLConnection) apiUrl.openConnection();
             InputStream inputStream = connection.getInputStream();
             BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
@@ -93,10 +120,17 @@ public class FetchData extends AsyncTask<Void, Void, Void> {
                     model.setType3(singleObject.get("type").toString());
                     model.setAction(singleObject.get("action").toString());
                     model.setLabel3(singleObject.get("label").toString());
-                    JSONObject jsonObject1 = (JSONObject) singleObject.get("api");
-                    model.setApi_uri(jsonObject1.get("ui").toString());
-                    model.setApi_method(jsonObject1.get("method").toString());
-                    model.setAuthEnabled(Boolean.parseBoolean(jsonObject1.get("authEnabled").toString()));
+//                    model.setApi_uri(singleObject.getJSONObject("api").get("uri").toString());
+//                    model.setApi_method(jsonObject1.get("method").toString());
+//                    model.setAuthEnabled(Boolean.parseBoolean(jsonObject1.get("authEnabled").toString()));
+                    Log.d("obj", "doInBackground: " + singleObject.getJSONObject("api"));
+                    JSONObject obj = singleObject.getJSONObject("api");
+                    Log.d("objuri", "doInBackground: " + obj.getString("uri"));
+                    model.setApi_uri(obj.getString("uri"));
+                    Log.d("wtf", "doInBackground: " + model.getApi_uri());
+
+                    model.setApi_method(obj.getString("method"));
+                    model.setAuthEnabled(Boolean.parseBoolean(obj.getString("authEnabled")));
                 }
             }
         } catch (MalformedURLException e) {
@@ -127,7 +161,7 @@ public class FetchData extends AsyncTask<Void, Void, Void> {
 
         //set input types
         first_edt.setInputType(InputType.TYPE_CLASS_NUMBER);
-        String inputType = model.getInputType();
+        final String inputType = model.getInputType();
 
         Log.d("input", "onPostExecute: " + inputType);
         if (inputType.equals("password")) {
@@ -149,8 +183,14 @@ public class FetchData extends AsyncTask<Void, Void, Void> {
 
             @Override
             public void onTextChanged(CharSequence s, int start, int before, int count) {
-                if (Integer.parseInt(s.toString()) < model.getMin() | Integer.parseInt(s.toString()) > model.getMax()) {
-                    first_edt.setError("Should be between " + model.getMin() + " and " + model.getMax());
+                if (!s.toString().isEmpty()) {
+                    if (Integer.parseInt(s.toString()) < model.getMin() | Integer.parseInt(s.toString()) > model.getMax()) {
+                        isNumValid = false;
+
+                        first_edt.setError("Should be between " + model.getMin() + " and " + model.getMax());
+                    } else {
+                        isNumValid = true;
+                    }
                 }
             }
 
@@ -162,13 +202,20 @@ public class FetchData extends AsyncTask<Void, Void, Void> {
         second_edt.addTextChangedListener(new TextWatcher() {
             @Override
             public void beforeTextChanged(CharSequence s, int start, int count, int after) {
-
             }
 
             @Override
             public void onTextChanged(CharSequence s, int start, int before, int count) {
-                if (!isValidEmail(s)) {
-                    second_edt.setError(model.getValidationMsg());
+                if (inputType.equals("email")) {
+                    if (!isValidEmail(s)) {
+                        isTextValid = false;
+
+                        second_edt.setError(model.getValidationMsg());
+                    } else {
+                        isTextValid = true;
+                    }
+                }else {
+                    isTextValid = true;
                 }
             }
 
@@ -179,9 +226,76 @@ public class FetchData extends AsyncTask<Void, Void, Void> {
         });
 
         super.onPostExecute(aVoid);
+
+
     }
 
     private static boolean isValidEmail(CharSequence target) {
         return !TextUtils.isEmpty(target) && android.util.Patterns.EMAIL_ADDRESS.matcher(target).matches();
     }
+
+
+    void postData() {
+
+        if (Objects.requireNonNull(first_edt.getText()).toString().isEmpty() || Objects.requireNonNull(second_edt.getText()).toString().isEmpty() || !isNumValid || !isTextValid) {
+            Snackbar.make(parent, Html.fromHtml("<font color=\"#FFFFFF\">Fields can't be empty</font>"), Snackbar.LENGTH_SHORT)
+                    .show();
+        } else {
+            try {
+                AsyncHttpClient client = new AsyncHttpClient();
+                // Http Request Params Object
+                RequestParams params = new RequestParams();
+                String first;
+                String second;
+                first = first_edt.getText().toString();
+                second = second_edt.getText().toString();
+                params.put(model.getLabel1(), first);
+                params.put(model.getLabel2(), second);
+                Log.d("uri", "postData: " + model.getApi_uri());
+                Log.d("method", "postData: " + model.getApi_method());
+                Log.d("auth", "postData: " + model.isAuthEnabled());
+                client.post(model.getApi_uri(), params, new AsyncHttpResponseHandler() {
+                    @Override
+                    public void onSuccess(String response) {
+
+                        showDialog();
+                        //reset the UI
+                        reset();
+                        submitLayout.setVisibility(View.INVISIBLE);
+                        Log.i("Response", "Response SP Status. " + response);
+//                        Snackbar.make(parent, Html.fromHtml("<font color=\"#663096\">Form Submitted</font>"), Snackbar.LENGTH_SHORT)
+//                                .show();
+                    }
+
+                    @Override
+                    public void onFailure(Throwable throwable) {
+                        super.onFailure(throwable);
+                    }
+                });
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    private void reset() {
+        first_edt.setText("");
+        second_edt.setText("");
+    }
+
+
+    private void showDialog() {
+        Dialog dialog = new Dialog(mContext);
+        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
+        dialog.setContentView(R.layout.completion_dialog);
+        dialog.setCanceledOnTouchOutside(true);
+        dialog.getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN);
+        dialog.getWindow().setLayout(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        dialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+
+        dialog.show();
+    }
+
+
 }
+
