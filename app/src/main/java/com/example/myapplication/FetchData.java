@@ -19,8 +19,6 @@ import android.view.Window;
 import android.view.WindowManager;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.LinearLayout;
-import android.widget.ProgressBar;
-import android.widget.Toast;
 
 import com.loopj.android.http.AsyncHttpClient;
 import com.loopj.android.http.AsyncHttpResponseHandler;
@@ -76,7 +74,7 @@ public class FetchData extends AsyncTask<Void, Void, Void> {
         try {
             // my Json server url /https://api.myjson.com/bins/rtx6m
             //assesment link https://ca.platform.simplifii.xyz/api/v1/static/assignment2
-            URL apiUrl = new URL("https://api.myjson.com/bins/pozw6");
+            URL apiUrl = new URL("https://ca.platform.simplifii.xyz/api/v1/static/assignment2");
             HttpsURLConnection connection = (HttpsURLConnection) apiUrl.openConnection();
             InputStream inputStream = connection.getInputStream();
             BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
@@ -292,7 +290,6 @@ public class FetchData extends AsyncTask<Void, Void, Void> {
         dialog.getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN);
         dialog.getWindow().setLayout(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
         dialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
-
         dialog.show();
     }
 

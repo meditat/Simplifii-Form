@@ -8,18 +8,10 @@ import android.os.Bundle;
 import android.support.v7.widget.AppCompatButton;
 import android.support.v7.widget.CardView;
 import android.text.Html;
-import android.text.InputType;
-import android.util.Log;
 import android.view.View;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.LinearLayout;
 import android.widget.RelativeLayout;
-import android.widget.Toast;
-
-import com.loopj.android.http.AsyncHttpClient;
-import com.loopj.android.http.AsyncHttpResponseHandler;
-import com.loopj.android.http.RequestParams;
-
 public class MainActivity extends AppCompatActivity {
 
     public static TextInputLayout firstEdt;
